@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DescribeIt — Natural Language to Code</title>
-    <script defer src="https://cdn.jsdelivr.net/npm/@vercel/analytics@1.0.0/dist/analytics.js"></script>
+    <script>
+        window.va = window.va || function() {(window.va.q = window.va.q || []).push(arguments)};
+        va('track', 'pageview');
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', system-ui, sans-serif; }
@@ -76,13 +80,13 @@
         generateBtn.addEventListener('click', () => {
             const prompt = promptInput.value.trim();
             if (prompt) {
-                va('track', 'generate_click', { prompt_length: prompt.length });
+                va('event', { name: 'generate_click', data: { prompt_length: prompt.length } });
             }
         });
 
         // Track copy button clicks
         copyBtn.addEventListener('click', () => {
-            va('track', 'code_copy', {});
+            va('event', { name: 'code_copy' });
         });
 
         const codeTemplates = {
