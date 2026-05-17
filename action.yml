@@ -1,0 +1,19 @@
+name: actionify
+description: Generate GitHub Actions workflow YAML from plain English descriptions
+branding:
+  icon: 'code'
+  color: purple
+inputs:
+  prompt:
+    description: Plain English description of the workflow you want
+    required: true
+    default: "build and test on push to main"
+outputs:
+  yaml:
+    description: Generated GitHub Actions YAML
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate YAML
+      run: echo "Use the web UI at https://code-five-mu.vercel.app"
+      shell: bash

@@ -1,46 +1,38 @@
-# DescribeIt
+# actionify — Plain English to GitHub Actions YAML
 
-Generate working HTML/CSS/JS from natural language prompts.
+Generate working GitHub Actions workflow YAML from plain English.
+
+## Usage
+
+```yaml
+# This action generates YAML — use the web UI for actual generation
+# https://code-five-mu.vercel.app
+```
+
+**Note:** For v0.1, this action is the marketplace listing presence only. The actual generation happens at [https://code-five-mu.vercel.app](https://code-five-mu.vercel.app).
 
 ## How it works
 
-Describe your desired UI and get instant, working code.
+Describe your desired CI/CD workflow in plain English:
+- "build and test on push to main" → complete workflow YAML
+- "deploy to production every day at 9am" → scheduled deploy workflow
+- "test across multiple Node versions" → matrix strategy workflow
 
-**Example:**
+No AI needed — pure template matching, runs entirely client-side.
 
-```
-Input: "A landing page hero section with a bold headline, a subheadline, and a CTA button"
-```
+## Templates
 
-```html
-<section class="bg-gray-900 min-h-screen flex items-center justify-center p-8">
-    <div class="max-w-3xl mx-auto text-center">
-        <h1 class="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Your Page Title</h1>
-        <p class="text-xl md:text-2xl text-gray-400 mb-10">Your subtitle goes here</p>
-        <button class="bg-purple-600 hover:bg-purple-700 text-white text-lg font-semibold py-4 px-10 rounded-full transition-all transform hover:scale-105">Get Started</button>
-    </div>
-</section>
-```
+- Node.js build + test
+- Python + pytest
+- Docker build + push
+- Scheduled (cron) workflows
+- Matrix strategy for multiple versions
+- Conditional execution by branch
 
-Describes support: hero sections, pricing tables, feature grids. Each generated with Tailwind CSS and a dark, modern aesthetic.
+## Live demo
 
-## Run locally
+**https://code-five-mu.vercel.app**
 
-Open `code/index.html` in any browser. No build step, no dependencies.
+---
 
-## Tech stack
-
-- **Single HTML file** — zero build pipeline, fully portable
-- **Vanilla JS** — no framework overhead, ~250 lines of logic
-- **Tailwind CSS CDN** — utility-first styling via CDN (no build step)
-- **Template-based generation** — parses natural language into structured component templates
-
-## Related projects
-
-- [bolt.new](https://bolt.new) — AI-powered full-stack dev environment
-- [Lovable](https://lovable.dev) — AI frontend builder with editor
-- [Replit](https://replit.com) — browser IDE with AI features
-
-## Live
-
-[![Deploy with Vercel](https://img.shields.io/badge/Live%20Site-Vercel-black)](https://code-five-mu.vercel.app)
+Made by [SolvoHQ](https://github.com/SolvoHQ)
