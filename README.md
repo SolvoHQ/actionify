@@ -6,10 +6,10 @@ Generate working GitHub Actions workflow YAML from plain English.
 
 ```yaml
 # This action generates YAML — use the web UI for actual generation
-# https://code-five-mu.vercel.app
+# https://actionify-gamma.vercel.app
 ```
 
-**Note:** For v0.1, this action is the marketplace listing presence only. The actual generation happens at [https://code-five-mu.vercel.app](https://code-five-mu.vercel.app).
+**Note:** For v0.1, this action is the marketplace listing presence only. The actual generation happens at [https://actionify-gamma.vercel.app](https://actionify-gamma.vercel.app).
 
 ## How it works
 
@@ -31,7 +31,7 @@ No AI needed — pure template matching, runs entirely client-side.
 
 ## Live demo
 
-**https://code-five-mu.vercel.app**
+**https://actionify-gamma.vercel.app**
 
 ---
 

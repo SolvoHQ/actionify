@@ -19,5 +19,5 @@ runs:
   using: 'composite'
   steps:
     - name: Generate YAML
-      run: echo "Use the web UI at https://code-five-mu.vercel.app"
+      run: echo "Use the web UI at https://actionify-gamma.vercel.app"
       shell: bash
