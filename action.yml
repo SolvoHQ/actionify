@@ -3,6 +3,10 @@ description: Generate GitHub Actions workflow YAML from plain English descriptio
 branding:
   icon: 'code'
   color: purple
+categories:
+  - CI/CD
+  - Automation
+  - Developer Tools
 inputs:
   prompt:
     description: Plain English description of the workflow you want
