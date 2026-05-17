@@ -29,6 +29,12 @@
                 class="w-full h-32 bg-gray-800 text-white rounded-xl p-4 text-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
             ></textarea>
 
+            <div id="example-chips" class="flex flex-wrap gap-2 mt-3">
+                <button class="example-chip text-xs bg-gray-800 px-3 py-1 rounded hover:bg-gray-700 text-gray-300" data-prompt="push to main and run tests">Push to main + test</button>
+                <button class="example-chip text-xs bg-gray-800 px-3 py-1 rounded hover:bg-gray-700 text-gray-300" data-prompt="run this every day">Daily cron job</button>
+                <button class="example-chip text-xs bg-gray-800 px-3 py-1 rounded hover:bg-gray-700 text-gray-300" data-prompt="test pull requests and deploy to production">PR + deploy</button>
+            </div>
+
             <div class="flex gap-4 mt-6">
                 <button id="generate" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 px-8 rounded-xl transition-all">
                     Generate YAML
@@ -44,9 +50,11 @@
         </div>
 
         <div id="output" class="mt-8 hidden">
+            <p id="trigger-tip" class="text-xs text-yellow-600 mt-2 hidden">Tip: include a trigger like 'on push to main' or 'every day' to customize when your workflow runs.</p>
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-semibold">Generated YAML</h2>
                 <button id="copy" class="text-purple-400 hover:text-purple-300 text-sm">Copy to clipboard</button>
+                <button id="download" class="text-purple-400 hover:text-purple-300 text-sm">Download .yml</button>
             </div>
             <pre id="code" class="bg-gray-900 rounded-xl p-6 overflow-x-auto text-sm font-mono"></pre>
         </div>
@@ -63,6 +71,9 @@
         const outputDiv = document.getElementById('output');
         const codePre = document.getElementById('code');
         const copyBtn = document.getElementById('copy');
+        const downloadBtn = document.getElementById('download');
+        const triggerTip = document.getElementById('trigger-tip');
+        const exampleChips = document.querySelectorAll('.example-chip');
 
         const TEMPLATES = {
             name: 'My Workflow',
@@ -301,11 +312,19 @@
             yaml += `    runs-on: ubuntu-latest\n`;
             yaml += `    steps:\n`;
 
+            // Track what we've added to avoid duplication
+            let addedCheckout = false;
+            let addedNodeSetup = false;
+            let addedPythonSetup = false;
+            let addedDockerBuildx = false;
+
             // Add checkout
             if (keywords.includes('checkout')) {
                 yaml += `      - uses: actions/checkout@v4\n`;
+                addedCheckout = true;
             } else {
                 yaml += `      - uses: actions/checkout@v4\n`;
+                addedCheckout = true;
             }
 
             // Add setup based on workflow type
@@ -313,16 +332,19 @@
                 yaml += `      - uses: actions/setup-node@v4\n`;
                 yaml += `        with:\n`;
                 yaml += `          node-version: '20'\n`;
+                addedNodeSetup = true;
             }
 
             if (hasPython || workflowSelect.value === 'python') {
                 yaml += `      - uses: actions/setup-python@v5\n`;
                 yaml += `        with:\n`;
                 yaml += `          python-version: '3.11'\n`;
+                addedPythonSetup = true;
             }
 
             if (hasDocker) {
                 yaml += `      - uses: docker/setup-buildx-action@v3\n`;
+                addedDockerBuildx = true;
             }
 
             // Add condition if present
@@ -333,13 +355,7 @@
             // Add steps
             if (workflowSelect.value === 'deploy' || keywords.includes('production')) {
                 // Build and deploy workflow
-                if (keywords.includes('checkout')) {
-                    // Already added checkout
-                }
-                if (keywords.includes('node_setup') || hasNode) {
-                    // Already added node setup
-                }
-                if (!hasNode && !hasPython && !hasDocker) {
+                if (!addedNodeSetup && !addedPythonSetup && !hasDocker) {
                     yaml += `      - uses: actions/setup-node@v4\n`;
                     yaml += `        with:\n`;
                     yaml += `          node-version: '20'\n`;
@@ -367,7 +383,7 @@
                 }
             } else {
                 // Default: build and test
-                if (!hasNode && !hasPython) {
+                if (!addedNodeSetup && !addedPythonSetup && !hasDocker) {
                     yaml += `      - uses: actions/setup-node@v4\n`;
                     yaml += `        with:\n`;
                     yaml += `          node-version: '20'\n`;
@@ -396,6 +412,17 @@
                 codePre.textContent = yaml;
                 outputDiv.classList.remove('hidden');
 
+                // Check if any trigger keyword was detected
+                const keywords = extractKeywords(prompt);
+                const hasTrigger = keywords.includes('push_main') || keywords.includes('push_branch') ||
+                                   keywords.includes('pull_request') || keywords.includes('schedule') ||
+                                   keywords.includes('workflow_dispatch');
+                if (hasTrigger) {
+                    triggerTip.classList.add('hidden');
+                } else {
+                    triggerTip.classList.remove('hidden');
+                }
+
                 generateBtn.disabled = false;
                 generateBtn.textContent = 'Generate YAML';
             }, 300);
@@ -405,6 +432,22 @@
             navigator.clipboard.writeText(codePre.textContent);
             copyBtn.textContent = 'Copied!';
             setTimeout(() => copyBtn.textContent = 'Copy to clipboard', 2000);
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const blob = new Blob([codePre.textContent], { type: 'text/yaml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'github-actions.yml';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        exampleChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                promptInput.value = chip.dataset.prompt;
+            });
         });
     </script>
 </body>
