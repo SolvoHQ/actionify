@@ -3,13 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DescribeIt — Natural Language to Code</title>
-    <script>
-        window.va = window.va || function() {(window.va.q = window.va.q || []).push(arguments)};
-        va('track', 'pageview');
-    </script>
-    <script defer src="/_vercel/insights/script.js"></script>
+    <title>actionify — Plain English to GitHub Actions YAML</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', system-ui, sans-serif; }
         .gradient-text {
@@ -22,247 +18,387 @@
 <body class="bg-gray-950 text-gray-100 min-h-screen">
     <div class="max-w-4xl mx-auto px-6 py-16">
         <header class="text-center mb-12">
-            <h1 class="text-5xl font-bold mb-4">Describe<span class="gradient-text">It</span></h1>
-            <p class="text-xl text-gray-400">Tell me what you want. Get working code.</p>
+            <h1 class="text-5xl font-bold mb-4">action<span class="gradient-text">ify</span></h1>
+            <p class="text-xl text-gray-400">Plain English → GitHub Actions YAML</p>
         </header>
 
         <div class="bg-gray-900 rounded-2xl p-8 shadow-2xl">
             <textarea
                 id="prompt"
-                placeholder="e.g., A landing page hero section with a bold headline, a subheadline, and a CTA button"
+                placeholder="e.g., build and test my React app on push to main"
                 class="w-full h-32 bg-gray-800 text-white rounded-xl p-4 text-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
             ></textarea>
 
             <div class="flex gap-4 mt-6">
                 <button id="generate" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 px-8 rounded-xl transition-all">
-                    Generate Code
+                    Generate YAML
                 </button>
-                <select id="framework" class="bg-gray-800 text-white rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-purple-500">
-                    <option value="html">Plain HTML/CSS</option>
-                    <option value="react">React + Tailwind</option>
-                    <option value="vue">Vue + Tailwind</option>
+                <select id="workflow-type" class="bg-gray-800 text-white rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <option value="auto">Auto-detect</option>
+                    <option value="node">Node.js</option>
+                    <option value="python">Python</option>
+                    <option value="docker">Docker</option>
+                    <option value="deploy">Deploy</option>
                 </select>
             </div>
         </div>
 
         <div id="output" class="mt-8 hidden">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold">Generated Code</h2>
+                <h2 class="text-xl font-semibold">Generated YAML</h2>
                 <button id="copy" class="text-purple-400 hover:text-purple-300 text-sm">Copy to clipboard</button>
             </div>
-            <pre id="code" class="bg-gray-900 rounded-xl p-6 overflow-x-auto text-sm"></pre>
-        </div>
-
-        <div id="preview" class="mt-8 hidden">
-            <h2 class="text-xl font-semibold mb-4">Live Preview</h2>
-            <iframe id="preview-frame" class="w-full bg-white rounded-xl" style="min-height: 400px;"></iframe>
+            <pre id="code" class="bg-gray-900 rounded-xl p-6 overflow-x-auto text-sm font-mono"></pre>
         </div>
 
         <footer class="text-center text-gray-600 text-sm mt-16">
-            Built with AI • No signup required • Instant results
+            No AI · Pure template matching · Client-side only
         </footer>
     </div>
 
     <script>
         const promptInput = document.getElementById('prompt');
         const generateBtn = document.getElementById('generate');
-        const frameworkSelect = document.getElementById('framework');
+        const workflowSelect = document.getElementById('workflow-type');
         const outputDiv = document.getElementById('output');
         const codePre = document.getElementById('code');
-        const previewDiv = document.getElementById('preview');
-        const previewFrame = document.getElementById('preview-frame');
         const copyBtn = document.getElementById('copy');
 
-        // Vercel Analytics initialization
-        window.va = window.va || function() {(window.va.q = window.va.q || []).push(arguments)};
-
-        // Track generate button clicks
-        generateBtn.addEventListener('click', () => {
-            const prompt = promptInput.value.trim();
-            if (prompt) {
-                va('event', { name: 'generate_click', data: { prompt_length: prompt.length } });
-            }
-        });
-
-        // Track copy button clicks
-        copyBtn.addEventListener('click', () => {
-            va('event', { name: 'code_copy' });
-        });
-
-        const codeTemplates = {
-            html: (prompt) => `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generated</title>
-    <script src="https://cdn.tailwindcss.com"><\/script>
-</head>
-<body class="bg-gray-950 text-white min-h-screen flex items-center justify-center">
-    <div class="text-center">
-        <h1 class="text-5xl font-bold mb-4">${extract(prompt, 'headline') || 'Your Headline Here'}</h1>
-        <p class="text-xl text-gray-400 mb-8">${extract(prompt, 'subheadline') || 'Your subheadline goes here'}</p>
-        <button class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-full transition-all">
-            ${extract(prompt, 'cta') || 'Get Started'}
-        </button>
-    </div>
-</body>
-</html>`,
-            react: (prompt) => `import React from 'react';
-
-export default function GeneratedComponent() {
-    return (
-        <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
-            <div className="text-center">
-                <h1 className="text-5xl font-bold mb-4">{${extract(prompt, 'headline') || "'Your Headline'"}}</h1>
-                <p className="text-xl text-gray-400 mb-8">{${extract(prompt, 'subheadline') || "'Your subheadline'"}}</p>
-                <button className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-full">
-                    ${extract(prompt, 'cta') || "'Get Started'"}
-                </button>
-            </div>
-        </div>
-    );
-}`,
-            vue: (prompt) => `<template>
-    <div class="min-h-screen bg-gray-950 text-white flex items-center justify-center">
-        <div class="text-center">
-            <h1 class="text-5xl font-bold mb-4">{{ headline }}</h1>
-            <p class="text-xl text-gray-400 mb-8">{{ subheadline }}</p>
-            <button class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-full">
-                {{ cta }}
-            </button>
-        </div>
-    </div>
-</template>
-
-<script setup>
-const headline = '${extract(prompt, 'headline') || 'Your Headline'}';
-const subheadline = '${extract(prompt, 'subheadline') || 'Your subheadline'}';
-const cta = '${extract(prompt, 'cta') || 'Get Started'}';
-</script>`
-        };
-
-        function extract(prompt, type) {
-            const patterns = {
-                headline: /headline[:\s]+["']?([^"'\n,]+)/i,
-                subheadline: /subheadline[:\s]+["']?([^"'\n,]+)/i,
-                cta: /cta|button[:\s]+["']?([^"'\n,]+)/i
-            };
-            const match = prompt.match(patterns[type]);
-            return match ? match[1].trim() : null;
-        }
-
         const TEMPLATES = {
-            hero: (title, subtitle, cta) => `
-    <section class="bg-gray-900 min-h-screen flex items-center justify-center p-8">
-        <div class="max-w-3xl mx-auto text-center">
-            <h1 class="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">${title}</h1>
-            <p class="text-xl md:text-2xl text-gray-400 mb-10">${subtitle}</p>
-            <button class="bg-purple-600 hover:bg-purple-700 text-white text-lg font-semibold py-4 px-10 rounded-full transition-all transform hover:scale-105">${cta}</button>
-        </div>
-    </section>`,
-            pricing: (title, subtitle) => `
-    <section class="bg-gray-950 py-20 px-8">
-        <div class="max-w-4xl mx-auto">
-            <h2 class="text-4xl font-bold text-center mb-4">${title}</h2>
-            <p class="text-gray-400 text-center text-lg mb-12">${subtitle}</p>
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="bg-gray-900 rounded-2xl p-8 text-center">
-                    <div class="text-3xl font-bold mb-2">$0</div>
-                    <div class="text-purple-400 text-sm uppercase tracking-wide mb-4">Free</div>
-                    <p class="text-gray-400">Perfect for trying out</p>
-                </div>
-                <div class="bg-gradient-to-b from-purple-900/50 to-gray-900 rounded-2xl p-8 text-center border border-purple-500/50">
-                    <div class="text-3xl font-bold mb-2">$29</div>
-                    <div class="text-purple-400 text-sm uppercase tracking-wide mb-4">Pro</div>
-                    <p class="text-gray-400">For serious developers</p>
-                </div>
-                <div class="bg-gray-900 rounded-2xl p-8 text-center">
-                    <div class="text-3xl font-bold mb-2">$99</div>
-                    <div class="text-purple-400 text-sm uppercase tracking-wide mb-4">Team</div>
-                    <p class="text-gray-400">For growing teams</p>
-                </div>
-            </div>
-        </div>
-    </section>`,
-            feature: (title, subtitle) => `
-    <section class="bg-gray-950 py-20 px-8">
-        <div class="max-w-4xl mx-auto">
-            <h2 class="text-4xl font-bold text-center mb-4">${title}</h2>
-            <p class="text-gray-400 text-center text-lg mb-12">${subtitle}</p>
-            <div class="grid md:grid-cols-2 gap-6">
-                <div class="bg-gray-900 rounded-xl p-6"><div class="text-purple-400 text-2xl mb-3">⚡</div><h3 class="text-xl font-semibold mb-2">Fast</h3><p class="text-gray-400">Ship in minutes, not hours</p></div>
-                <div class="bg-gray-900 rounded-xl p-6"><div class="text-purple-400 text-2xl mb-3">🎯</div><h3 class="text-xl font-semibold mb-2">Precise</h3><p class="text-gray-400">Exactly what you asked for</p></div>
-                <div class="bg-gray-900 rounded-xl p-6"><div class="text-purple-400 text-2xl mb-3">🔧</div><h3 class="text-xl font-semibold mb-2">Flexible</h3><p class="text-gray-400">Customize every detail</p></div>
-                <div class="bg-gray-900 rounded-xl p-6"><div class="text-purple-400 text-2xl mb-3">💎</div><h3 class="text-xl font-semibold mb-2">Beautiful</h3><p class="text-gray-400">Designed to impress</p></div>
-            </div>
-        </div>
-    </section>`
+            name: 'My Workflow',
+
+            triggers: {
+                push_main: {
+                    keywords: ['push to main', 'on push to main', 'push main', 'commit to main'],
+                    yaml: `on:
+  push:
+    branches: [main]`
+                },
+                push_branch: {
+                    keywords: ['push to', 'on push', 'push to branch'],
+                    yaml: null // handled dynamically
+                },
+                pull_request: {
+                    keywords: ['pull request', 'pr', 'test pull requests', 'on pr'],
+                    yaml: `on:
+  pull_request:`
+                },
+                schedule: {
+                    keywords: ['every day', 'daily', 'schedule', 'cron', 'every hour', 'every week'],
+                    yaml: null // handled dynamically
+                },
+                workflow_dispatch: {
+                    keywords: ['manual', 'workflow dispatch', 'on demand'],
+                    yaml: `on:
+  workflow_dispatch:`
+                }
+            },
+
+            actions: {
+                checkout: {
+                    keywords: ['checkout', 'checkout code', 'clone', 'fetch code'],
+                    yaml: `- uses: actions/checkout@v4`
+                },
+                node_setup: {
+                    keywords: ['setup node', 'node.js', 'node version', 'nodejs'],
+                    yaml: `- uses: actions/setup-node@v4
+  with:
+    node-version: '20'`
+                },
+                python_setup: {
+                    keywords: ['setup python', 'python version', 'python3'],
+                    yaml: `- uses: actions/setup-python@v5
+  with:
+    python-version: '3.11'`
+                },
+                npm_install: {
+                    keywords: ['npm install', 'install dependencies', 'npm ci'],
+                    yaml: `- run: npm ci`
+                },
+                npm_build: {
+                    keywords: ['build', 'npm run build', 'build app'],
+                    yaml: `- run: npm run build`
+                },
+                npm_test: {
+                    keywords: ['test', 'npm test', 'run tests', 'testing'],
+                    yaml: `- run: npm test`
+                },
+                docker_build: {
+                    keywords: ['docker build', 'build docker', 'docker image'],
+                    yaml: `- uses: docker/build-push-action@v5
+  with:
+    push: false
+    tags: my-image:latest`
+                },
+                docker_push: {
+                    keywords: ['push docker', 'push image', 'docker push'],
+                    yaml: `- uses: docker/build-push-action@v5
+  with:
+    push: true
+    tags: my-image:latest`
+                }
+            },
+
+            conditions: {
+                main_branch: {
+                    keywords: ['main branch', 'only main', 'on main'],
+                    yaml: `if: github.ref == 'refs/heads/main'`
+                },
+                production: {
+                    keywords: ['production', 'prod', 'deploy production'],
+                    yaml: `if: github.ref == 'refs/heads/main'`
+                }
+            },
+
+            matrix: {
+                keywords: ['matrix', 'multiple', 'across versions', 'test across', 'different versions'],
+                yaml: `strategy:
+  matrix:
+    node-version: [18, 20, 22]`
+            }
         };
 
-        function parsePrompt(prompt) {
+        function extractKeywords(prompt) {
             const lower = prompt.toLowerCase();
-            if (lower.includes('hero') || lower.includes('landing')) {
-                return TEMPLATES.hero(
-                    extract(prompt, 'title') || 'Build Faster',
-                    extract(prompt, 'subtitle') || 'Describe what you want. Get working code.',
-                    extract(prompt, 'cta') || 'Get Started'
-                );
-            } else if (lower.includes('pricing') || lower.includes('plan') || lower.includes('cost')) {
-                return TEMPLATES.pricing(
-                    extract(prompt, 'title') || 'Simple Pricing',
-                    extract(prompt, 'subtitle') || 'Choose the plan that fits your needs'
-                );
-            } else if (lower.includes('feature') || lower.includes('benefit')) {
-                return TEMPLATES.feature(
-                    extract(prompt, 'title') || 'Why Choose Us',
-                    extract(prompt, 'subtitle') || 'Everything you need to succeed'
-                );
+            const keywords = [];
+
+            // Check for trigger keywords
+            if (lower.includes('push') && (lower.includes('main') || lower.includes('master'))) {
+                keywords.push('push_main');
+            } else if (lower.includes('push')) {
+                keywords.push('push_branch');
             }
-            return TEMPLATES.hero(
-                extract(prompt, 'title') || extract(prompt, 'headline') || 'Your Page Title',
-                extract(prompt, 'subtitle') || extract(prompt, 'headline') || 'Your subtitle goes here',
-                extract(prompt, 'cta') || 'Learn More'
-            );
+            if (lower.includes('pull request') || lower.includes(' pr')) {
+                keywords.push('pull_request');
+            }
+            if (lower.includes('schedule') || lower.includes('cron') || lower.includes('every day') || lower.includes('daily') || lower.includes('every hour')) {
+                keywords.push('schedule');
+            }
+            if (lower.includes('manual') || lower.includes('workflow dispatch') || lower.includes('on demand')) {
+                keywords.push('workflow_dispatch');
+            }
+
+            // Check for action keywords
+            if (lower.includes('checkout') || lower.includes('clone') || lower.includes('fetch code')) {
+                keywords.push('checkout');
+            }
+            if (lower.includes('setup node') || lower.includes('node.js') || lower.includes('node version')) {
+                keywords.push('node_setup');
+            }
+            if (lower.includes('setup python') || lower.includes('python version') || lower.includes('python3')) {
+                keywords.push('python_setup');
+            }
+            if (lower.includes('npm install') || lower.includes('install dependencies') || lower.includes('npm ci')) {
+                keywords.push('npm_install');
+            }
+            if (lower.includes('build') && !lower.includes('docker build')) {
+                keywords.push('npm_build');
+            }
+            if (lower.includes('test')) {
+                keywords.push('npm_test');
+            }
+            if (lower.includes('docker build') || lower.includes('build docker')) {
+                keywords.push('docker_build');
+            }
+            if (lower.includes('docker push') || lower.includes('push image') || lower.includes('push docker')) {
+                keywords.push('docker_push');
+            }
+
+            // Check for condition keywords
+            if (lower.includes('main branch') || lower.includes('only main') || lower.includes('on main')) {
+                keywords.push('main_branch');
+            }
+            if (lower.includes('production') || lower.includes('prod')) {
+                keywords.push('production');
+            }
+
+            // Check for matrix
+            if (lower.includes('matrix') || lower.includes('multiple') || (lower.includes('test across') && lower.includes('node'))) {
+                keywords.push('matrix');
+            }
+
+            return keywords;
         }
 
-        function extract(prompt, type) {
-            const patterns = {
-                title: /(?:title|name)[:\s]+["']?([^"'\n]+)/i,
-                subtitle: /subtitle[:\s]+["']?([^"'\n]+)/i,
-                cta: /(?:cta|button|action)[:\s]+["']?([^"'\n]+)/i
-            };
-            const match = prompt.match(patterns[type]);
-            return match ? match[1].trim() : null;
+        function parseCron(prompt) {
+            const lower = prompt.toLowerCase();
+            if (lower.includes('every day') || lower.includes('daily')) {
+                return '0 9 * * *'; // 9am daily
+            }
+            if (lower.includes('every hour')) {
+                return '0 * * * *';
+            }
+            if (lower.includes('every week')) {
+                return '0 9 * * 0';
+            }
+            if (lower.includes('every minute')) {
+                return '* * * * *';
+            }
+            return '0 9 * * *'; // default
         }
 
-        generateBtn.addEventListener('click', async () => {
+        function generateYAML(prompt, workflowType) {
+            const keywords = extractKeywords(prompt);
+            let yaml = `name: ${TEMPLATES.name}\n`;
+
+            // Determine triggers
+            const hasPushMain = keywords.includes('push_main');
+            const hasPullRequest = keywords.includes('pull_request');
+            const hasSchedule = keywords.includes('schedule');
+            const hasWorkflowDispatch = keywords.includes('workflow_dispatch');
+
+            if (hasPushMain || hasPullRequest || hasSchedule || hasWorkflowDispatch) {
+                yaml += 'on:\n';
+                if (hasPushMain) {
+                    yaml += '  push:\n    branches: [main]\n';
+                }
+                if (hasPullRequest) {
+                    yaml += '  pull_request:\n';
+                }
+                if (hasSchedule) {
+                    yaml += `  schedule:\n    cron: '${parseCron(prompt)}'\n`;
+                }
+                if (hasWorkflowDispatch) {
+                    yaml += '  workflow_dispatch:\n';
+                }
+            } else {
+                // Default trigger
+                yaml += 'on:\n  push:\n    branches: [main]\n';
+            }
+
+            // Start jobs
+            yaml += '\njobs:\n';
+
+            const hasNode = keywords.includes('node_setup');
+            const hasPython = keywords.includes('python_setup');
+            const hasDocker = keywords.includes('docker_build') || keywords.includes('docker_push');
+            const hasMatrix = keywords.includes('matrix');
+
+            let jobName = 'build';
+            if (hasDocker) jobName = 'docker';
+            if (workflowSelect.value === 'deploy') jobName = 'deploy';
+
+            // Matrix setup
+            if (hasMatrix && (hasNode || workflowSelect.value === 'node' || workflowSelect.value === 'auto')) {
+                yaml += `  ${jobName}:\n`;
+                yaml += `    runs-on: ubuntu-latest\n`;
+                yaml += `    strategy:\n`;
+                yaml += `      matrix:\n`;
+                yaml += `        node-version: [18, 20, 22]\n`;
+                yaml += `    steps:\n`;
+                yaml += `      - uses: actions/checkout@v4\n`;
+                yaml += `      - uses: actions/setup-node@v4\n`;
+                yaml += `        with:\n`;
+                yaml += `          node-version: \${{ matrix.node-version }}\n`;
+                yaml += `      - run: npm ci\n`;
+                if (keywords.includes('npm_test')) {
+                    yaml += `      - run: npm test\n`;
+                }
+                return yaml;
+            }
+
+            yaml += `  ${jobName}:\n`;
+            yaml += `    runs-on: ubuntu-latest\n`;
+            yaml += `    steps:\n`;
+
+            // Add checkout
+            if (keywords.includes('checkout')) {
+                yaml += `      - uses: actions/checkout@v4\n`;
+            } else {
+                yaml += `      - uses: actions/checkout@v4\n`;
+            }
+
+            // Add setup based on workflow type
+            if (hasNode || workflowSelect.value === 'node' || (workflowSelect.value === 'auto' && !hasPython && !hasDocker)) {
+                yaml += `      - uses: actions/setup-node@v4\n`;
+                yaml += `        with:\n`;
+                yaml += `          node-version: '20'\n`;
+            }
+
+            if (hasPython || workflowSelect.value === 'python') {
+                yaml += `      - uses: actions/setup-python@v5\n`;
+                yaml += `        with:\n`;
+                yaml += `          python-version: '3.11'\n`;
+            }
+
+            if (hasDocker) {
+                yaml += `      - uses: docker/setup-buildx-action@v3\n`;
+            }
+
+            // Add condition if present
+            if (keywords.includes('main_branch') || keywords.includes('production')) {
+                yaml = yaml.replace('    runs-on: ubuntu-latest', '    runs-on: ubuntu-latest\n    if: github.ref == \'refs/heads/main\'');
+            }
+
+            // Add steps
+            if (workflowSelect.value === 'deploy' || keywords.includes('production')) {
+                // Build and deploy workflow
+                if (keywords.includes('checkout')) {
+                    // Already added checkout
+                }
+                if (keywords.includes('node_setup') || hasNode) {
+                    // Already added node setup
+                }
+                if (!hasNode && !hasPython && !hasDocker) {
+                    yaml += `      - uses: actions/setup-node@v4\n`;
+                    yaml += `        with:\n`;
+                    yaml += `          node-version: '20'\n`;
+                }
+                yaml += `      - run: npm ci\n`;
+                if (keywords.includes('npm_build')) {
+                    yaml += `      - run: npm run build\n`;
+                }
+                yaml += `      - name: Deploy\n`;
+                yaml += `        run: |\n`;
+                yaml += `          echo "Deploying to production..."\n`;
+                yaml += `          # Add your deploy commands here\n`;
+            } else if (hasDocker) {
+                if (keywords.includes('docker_build')) {
+                    yaml += `      - uses: docker/build-push-action@v5\n`;
+                    yaml += `        with:\n`;
+                    yaml += `          push: false\n`;
+                    yaml += `          tags: my-image:latest\n`;
+                }
+                if (keywords.includes('docker_push')) {
+                    yaml += `      - uses: docker/build-push-action@v5\n`;
+                    yaml += `        with:\n`;
+                    yaml += `          push: true\n`;
+                    yaml += `          tags: my-image:latest\n`;
+                }
+            } else {
+                // Default: build and test
+                if (!hasNode && !hasPython) {
+                    yaml += `      - uses: actions/setup-node@v4\n`;
+                    yaml += `        with:\n`;
+                    yaml += `          node-version: '20'\n`;
+                }
+                yaml += `      - run: npm ci\n`;
+                if (keywords.includes('npm_build') || prompt.toLowerCase().includes('build')) {
+                    yaml += `      - run: npm run build\n`;
+                }
+                if (keywords.includes('npm_test') || keywords.includes('test')) {
+                    yaml += `      - run: npm test\n`;
+                }
+            }
+
+            return yaml;
+        }
+
+        generateBtn.addEventListener('click', () => {
             const prompt = promptInput.value.trim();
             if (!prompt) return;
 
             generateBtn.disabled = true;
             generateBtn.textContent = 'Generating...';
 
-            await new Promise(r => setTimeout(r, 600));
+            setTimeout(() => {
+                const yaml = generateYAML(prompt, workflowSelect.value);
+                codePre.textContent = yaml;
+                outputDiv.classList.remove('hidden');
 
-            const code = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generated</title>
-    <script src="https://cdn.tailwindcss.com"><\/script>
-</head<body>${parsePrompt(prompt)}
-</body>
-</html>`;
-
-            codePre.textContent = code;
-            outputDiv.classList.remove('hidden');
-            previewDiv.classList.remove('hidden');
-            previewFrame.srcdoc = code;
-
-            generateBtn.disabled = false;
-            generateBtn.textContent = 'Generate Code';
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate YAML';
+            }, 300);
         });
 
         copyBtn.addEventListener('click', () => {
