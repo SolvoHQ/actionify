@@ -35,4 +35,8 @@ No AI needed — pure template matching, runs entirely client-side.
 
 ---
 
+## Sibling project
+
+[describeit](https://github.com/SolvoHQ/describeit) — Plain English to UI code components, by the same team.
+
 Made by [SolvoHQ](https://github.com/SolvoHQ)
