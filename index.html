@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DescribeIt — Natural Language to Code</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+    <div class="max-w-4xl mx-auto px-6 py-16">
+        <header class="text-center mb-12">
+            <h1 class="text-5xl font-bold mb-4">Describe<span class="gradient-text">It</span></h1>
+            <p class="text-xl text-gray-400">Tell me what you want. Get working code.</p>
+        </header>
+
+        <div class="bg-gray-900 rounded-2xl p-8 shadow-2xl">
+            <textarea
+                id="prompt"
+                placeholder="e.g., A landing page hero section with a bold headline, a subheadline, and a CTA button"
+                class="w-full h-32 bg-gray-800 text-white rounded-xl p-4 text-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+            ></textarea>
+
+            <div class="flex gap-4 mt-6">
+                <button id="generate" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 px-8 rounded-xl transition-all">
+                    Generate Code
+                </button>
+                <select id="framework" class="bg-gray-800 text-white rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <option value="html">Plain HTML/CSS</option>
+                    <option value="react">React + Tailwind</option>
+                    <option value="vue">Vue + Tailwind</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="output" class="mt-8 hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Generated Code</h2>
+                <button id="copy" class="text-purple-400 hover:text-purple-300 text-sm">Copy to clipboard</button>
+            </div>
+            <pre id="code" class="bg-gray-900 rounded-xl p-6 overflow-x-auto text-sm"></pre>
+        </div>
+
+        <div id="preview" class="mt-8 hidden">
+            <h2 class="text-xl font-semibold mb-4">Live Preview</h2>
+            <iframe id="preview-frame" class="w-full bg-white rounded-xl" style="min-height: 400px;"></iframe>
+        </div>
+
+        <footer class="text-center text-gray-600 text-sm mt-16">
+            Built with AI • No signup required • Instant results
+        </footer>
+    </div>
+
+    <script>
+        const promptInput = document.getElementById('prompt');
+        const generateBtn = document.getElementById('generate');
+        const frameworkSelect = document.getElementById('framework');
+        const outputDiv = document.getElementById('output');
+        const codePre = document.getElementById('code');
+        const previewDiv = document.getElementById('preview');
+        const previewFrame = document.getElementById('preview-frame');
+        const copyBtn = document.getElementById('copy');
+
+        const codeTemplates = {
+            html: (prompt) => `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generated</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+</head>
+<body class="bg-gray-950 text-white min-h-screen flex items-center justify-center">
+    <div class="text-center">
+        <h1 class="text-5xl font-bold mb-4">${extract(prompt, 'headline') || 'Your Headline Here'}</h1>
+        <p class="text-xl text-gray-400 mb-8">${extract(prompt, 'subheadline') || 'Your subheadline goes here'}</p>
+        <button class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-full transition-all">
+            ${extract(prompt, 'cta') || 'Get Started'}
+        </button>
+    </div>
+</body>
+</html>`,
+            react: (prompt) => `import React from 'react';
+
+export default function GeneratedComponent() {
+    return (
+        <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+            <div className="text-center">
+                <h1 className="text-5xl font-bold mb-4">{${extract(prompt, 'headline') || "'Your Headline'"}}</h1>
+                <p className="text-xl text-gray-400 mb-8">{${extract(prompt, 'subheadline') || "'Your subheadline'"}}</p>
+                <button className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-full">
+                    ${extract(prompt, 'cta') || "'Get Started'"}
+                </button>
+            </div>
+        </div>
+    );
+}`,
+            vue: (prompt) => `<template>
+    <div class="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+        <div class="text-center">
+            <h1 class="text-5xl font-bold mb-4">{{ headline }}</h1>
+            <p class="text-xl text-gray-400 mb-8">{{ subheadline }}</p>
+            <button class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-full">
+                {{ cta }}
+            </button>
+        </div>
+    </div>
+</template>
+
+<script setup>
+const headline = '${extract(prompt, 'headline') || 'Your Headline'}';
+const subheadline = '${extract(prompt, 'subheadline') || 'Your subheadline'}';
+const cta = '${extract(prompt, 'cta') || 'Get Started'}';
+</script>`
+        };
+
+        function extract(prompt, type) {
+            const patterns = {
+                headline: /headline[:\s]+["']?([^"'\n,]+)/i,
+                subheadline: /subheadline[:\s]+["']?([^"'\n,]+)/i,
+                cta: /cta|button[:\s]+["']?([^"'\n,]+)/i
+            };
+            const match = prompt.match(patterns[type]);
+            return match ? match[1].trim() : null;
+        }
+
+        const TEMPLATES = {
+            hero: (title, subtitle, cta) => `
+    <section class="bg-gray-900 min-h-screen flex items-center justify-center p-8">
+        <div class="max-w-3xl mx-auto text-center">
+            <h1 class="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">${title}</h1>
+            <p class="text-xl md:text-2xl text-gray-400 mb-10">${subtitle}</p>
+            <button class="bg-purple-600 hover:bg-purple-700 text-white text-lg font-semibold py-4 px-10 rounded-full transition-all transform hover:scale-105">${cta}</button>
+        </div>
+    </section>`,
+            pricing: (title, subtitle) => `
+    <section class="bg-gray-950 py-20 px-8">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-4xl font-bold text-center mb-4">${title}</h2>
+            <p class="text-gray-400 text-center text-lg mb-12">${subtitle}</p>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-gray-900 rounded-2xl p-8 text-center">
+                    <div class="text-3xl font-bold mb-2">$0</div>
+                    <div class="text-purple-400 text-sm uppercase tracking-wide mb-4">Free</div>
+                    <p class="text-gray-400">Perfect for trying out</p>
+                </div>
+                <div class="bg-gradient-to-b from-purple-900/50 to-gray-900 rounded-2xl p-8 text-center border border-purple-500/50">
+                    <div class="text-3xl font-bold mb-2">$29</div>
+                    <div class="text-purple-400 text-sm uppercase tracking-wide mb-4">Pro</div>
+                    <p class="text-gray-400">For serious developers</p>
+                </div>
+                <div class="bg-gray-900 rounded-2xl p-8 text-center">
+                    <div class="text-3xl font-bold mb-2">$99</div>
+                    <div class="text-purple-400 text-sm uppercase tracking-wide mb-4">Team</div>
+                    <p class="text-gray-400">For growing teams</p>
+                </div>
+            </div>
+        </div>
+    </section>`,
+            feature: (title, subtitle) => `
+    <section class="bg-gray-950 py-20 px-8">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-4xl font-bold text-center mb-4">${title}</h2>
+            <p class="text-gray-400 text-center text-lg mb-12">${subtitle}</p>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-gray-900 rounded-xl p-6"><div class="text-purple-400 text-2xl mb-3">⚡</div><h3 class="text-xl font-semibold mb-2">Fast</h3><p class="text-gray-400">Ship in minutes, not hours</p></div>
+                <div class="bg-gray-900 rounded-xl p-6"><div class="text-purple-400 text-2xl mb-3">🎯</div><h3 class="text-xl font-semibold mb-2">Precise</h3><p class="text-gray-400">Exactly what you asked for</p></div>
+                <div class="bg-gray-900 rounded-xl p-6"><div class="text-purple-400 text-2xl mb-3">🔧</div><h3 class="text-xl font-semibold mb-2">Flexible</h3><p class="text-gray-400">Customize every detail</p></div>
+                <div class="bg-gray-900 rounded-xl p-6"><div class="text-purple-400 text-2xl mb-3">💎</div><h3 class="text-xl font-semibold mb-2">Beautiful</h3><p class="text-gray-400">Designed to impress</p></div>
+            </div>
+        </div>
+    </section>`
+        };
+
+        function parsePrompt(prompt) {
+            const lower = prompt.toLowerCase();
+            if (lower.includes('hero') || lower.includes('landing')) {
+                return TEMPLATES.hero(
+                    extract(prompt, 'title') || 'Build Faster',
+                    extract(prompt, 'subtitle') || 'Describe what you want. Get working code.',
+                    extract(prompt, 'cta') || 'Get Started'
+                );
+            } else if (lower.includes('pricing') || lower.includes('plan') || lower.includes('cost')) {
+                return TEMPLATES.pricing(
+                    extract(prompt, 'title') || 'Simple Pricing',
+                    extract(prompt, 'subtitle') || 'Choose the plan that fits your needs'
+                );
+            } else if (lower.includes('feature') || lower.includes('benefit')) {
+                return TEMPLATES.feature(
+                    extract(prompt, 'title') || 'Why Choose Us',
+                    extract(prompt, 'subtitle') || 'Everything you need to succeed'
+                );
+            }
+            return TEMPLATES.hero(
+                extract(prompt, 'title') || extract(prompt, 'headline') || 'Your Page Title',
+                extract(prompt, 'subtitle') || extract(prompt, 'headline') || 'Your subtitle goes here',
+                extract(prompt, 'cta') || 'Learn More'
+            );
+        }
+
+        function extract(prompt, type) {
+            const patterns = {
+                title: /(?:title|name)[:\s]+["']?([^"'\n]+)/i,
+                subtitle: /subtitle[:\s]+["']?([^"'\n]+)/i,
+                cta: /(?:cta|button|action)[:\s]+["']?([^"'\n]+)/i
+            };
+            const match = prompt.match(patterns[type]);
+            return match ? match[1].trim() : null;
+        }
+
+        generateBtn.addEventListener('click', async () => {
+            const prompt = promptInput.value.trim();
+            if (!prompt) return;
+
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Generating...';
+
+            await new Promise(r => setTimeout(r, 600));
+
+            const code = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generated</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+</head<body>${parsePrompt(prompt)}
+</body>
+</html>`;
+
+            codePre.textContent = code;
+            outputDiv.classList.remove('hidden');
+            previewDiv.classList.remove('hidden');
+            previewFrame.srcdoc = code;
+
+            generateBtn.disabled = false;
+            generateBtn.textContent = 'Generate Code';
+        });
+
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(codePre.textContent);
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => copyBtn.textContent = 'Copy to clipboard', 2000);
+        });
+    </script>
+</body>
+</html>
