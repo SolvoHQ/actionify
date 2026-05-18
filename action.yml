@@ -1,23 +1,46 @@
 name: actionify
-description: Generate GitHub Actions workflow YAML from plain English descriptions
+
+author: SolvoHQ
+
+description: |
+  Generate valid GitHub Actions workflow YAML from plain English descriptions.
+  No AI, no API calls, no hallucination risk — templates ensure every output
+  is a working workflow. Describe what you need, get YAML instantly, entirely client-side.
+
 branding:
-  icon: 'code'
+  icon: lightning-bolt
   color: purple
+
 categories:
   - CI/CD
   - Automation
   - Developer Tools
+
+keywords:
+  - github actions
+  - yaml generator
+  - ci/cd
+  - workflow
+  - automation
+  - plain english to yaml
+  - github workflow
+  - devops
+  - continuous integration
+  - continuous deployment
+
 inputs:
   prompt:
-    description: Plain English description of the workflow you want
+    description: Plain English description of the GitHub Actions workflow you want to generate (e.g. "build and test on push to main")
     required: true
     default: "build and test on push to main"
+
 outputs:
   yaml:
-    description: Generated GitHub Actions YAML
+    description: Generated GitHub Actions workflow YAML
+
 runs:
-  using: 'composite'
+  using: composite
   steps:
-    - name: Generate YAML
-      run: echo "Use the web UI at https://actionify-gamma.vercel.app"
+    - name: Generate workflow YAML
+      run: echo "actionify generates YAML at https://actionify-gamma.vercel.app — paste your prompt there for instant results"
       shell: bash
