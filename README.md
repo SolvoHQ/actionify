@@ -43,6 +43,6 @@ This repo is the marketplace listing. The actual generator is at [https://action
     prompt: "build and test on push to main"
 ```
 
-[MCP Directory](https://mcp-directory.vercel.app) · plain English to UI components
+[MCP Directory](https://mcp-directory-six.vercel.app) · plain English to UI components
 
 **Made by [SolvoHQ](https://github.com/SolvoHQ)** — [describeit](https://github.com/SolvoHQ/describeit) · plain English to UI components
